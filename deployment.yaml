@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-notes-deployment
+  labels:
+    app: cloud-notes
+spec:
+  replicas: 2                         # Run 2 instances for availability
+  selector:
+    matchLabels:
+      app: cloud-notes
+  template:
+    metadata:
+      labels:
+        app: cloud-notes
+    spec:
+      containers:
+        - name: cloud-notes
+          image: cloud-notes-app:1.0.0   # Replace with your registry image if needed
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: APP_VERSION
+              value: "1.0.0"
+          # Liveness probe: restart container if unhealthy
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          # Readiness probe: only send traffic when ready
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          # Resource limits (good practice for cloud cost control)
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "250m"
