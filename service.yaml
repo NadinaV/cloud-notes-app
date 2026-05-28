@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloud-notes-service
+  labels:
+    app: cloud-notes
+spec:
+  type: NodePort          # Use LoadBalancer for GKE / Cloud Run
+  selector:
+    app: cloud-notes      # Routes traffic to pods with this label
+  ports:
+    - protocol: TCP
+      port: 80            # Service port (external)
+      targetPort: 3000    # Container port (internal)
+      nodePort: 30080     # Node port (accessible on host at localhost:30080)
