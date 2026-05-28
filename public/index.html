@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cloud Notes App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+    header {
+      background: linear-gradient(135deg, #1a73e8, #0d47a1);
+      color: white; padding: 1.5rem 2rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    header h1 { font-size: 1.5rem; font-weight: 600; }
+    .cloud-icon { font-size: 2rem; }
+
+    .container { max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+
+    .info-bar {
+      background: white; border-radius: 10px; padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem; display: flex; gap: 2rem; flex-wrap: wrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .info-item { display: flex; flex-direction: column; }
+    .info-label { font-size: 0.72rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
+    .info-value { font-size: 0.95rem; font-weight: 600; color: #1a73e8; }
+
+    .card {
+      background: white; border-radius: 10px; padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 1.5rem;
+    }
+    .card h2 { font-size: 1.05rem; margin-bottom: 1rem; color: #333; }
+
+    .add-form { display: flex; gap: 0.75rem; }
+    .add-form input {
+      flex: 1; padding: 0.65rem 1rem; border: 2px solid #e0e0e0;
+      border-radius: 8px; font-size: 0.95rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .add-form input:focus { border-color: #1a73e8; }
+    .add-form button {
+      background: #1a73e8; color: white; border: none;
+      padding: 0.65rem 1.25rem; border-radius: 8px; cursor: pointer;
+      font-size: 0.95rem; font-weight: 500; transition: background 0.2s;
+    }
+    .add-form button:hover { background: #1558c0; }
+
+    .notes-list { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem; }
+    .note-item {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: 0.85rem 1rem; background: #f8faff; border-radius: 8px;
+      border-left: 4px solid #1a73e8; gap: 1rem;
+    }
+    .note-text { flex: 1; font-size: 0.95rem; color: #333; line-height: 1.4; }
+    .note-meta { font-size: 0.72rem; color: #aaa; margin-top: 0.25rem; }
+    .delete-btn {
+      background: none; border: none; cursor: pointer; color: #bbb;
+      font-size: 1.1rem; padding: 0.2rem; transition: color 0.2s; flex-shrink: 0;
+    }
+    .delete-btn:hover { color: #e53935; }
+    .empty { text-align: center; color: #bbb; padding: 2rem; font-size: 0.95rem; }
+
+    .status-dot {
+      display: inline-block; width: 8px; height: 8px;
+      border-radius: 50%; background: #4caf50; margin-right: 6px;
+    }
+    .status-label { font-size: 0.85rem; color: #555; }
+
+    .health-card { display: flex; align-items: center; gap: 1rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="cloud-icon">☁️</span>
+    <div>
+      <h1>Cloud Notes App</h1>
+      <div style="font-size:0.8rem; opacity:0.8;">Cloud Computing Laboratory Project</div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="info-bar" id="infoBar">
+      <div class="info-item"><span class="info-label">Version</span><span class="info-value" id="version">—</span></div>
+      <div class="info-item"><span class="info-label">Environment</span><span class="info-value" id="env">—</span></div>
+      <div class="info-item"><span class="info-label">Hostname (Pod)</span><span class="info-value" id="hostname">—</span></div>
+      <div class="info-item"><span class="info-label">Uptime</span><span class="info-value" id="uptime">—</span></div>
+      <div class="info-item"><span class="info-label">Node.js</span><span class="info-value" id="nodeVer">—</span></div>
+    </div>
+
+    <div class="card">
+      <h2>📝 Add a Note</h2>
+      <div class="add-form">
+        <input type="text" id="noteInput" placeholder="Type your note here..." maxlength="200"/>
+        <button onclick="addNote()">Add Note</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🗒️ Notes (<span id="noteCount">0</span>)</h2>
+      <div class="notes-list" id="notesList">
+        <div class="empty">Loading notes...</div>
+      </div>
+    </div>
+
+    <div class="card health-card">
+      <span class="status-dot" id="statusDot"></span>
+      <span class="status-label" id="statusLabel">Checking health...</span>
+    </div>
+  </div>
+
+  <script>
+    async function loadInfo() {
+      const res = await fetch('/api/info');
+      const data = await res.json();
+      document.getElementById('version').textContent = data.version;
+      document.getElementById('env').textContent = data.environment;
+      document.getElementById('hostname').textContent = data.hostname;
+      document.getElementById('uptime').textContent = data.uptime + 's';
+      document.getElementById('nodeVer').textContent = data.nodeVersion;
+    }
+
+    async function loadNotes() {
+      const res = await fetch('/api/notes');
+      const notes = await res.json();
+      const list = document.getElementById('notesList');
+      document.getElementById('noteCount').textContent = notes.length;
+      if (notes.length === 0) {
+        list.innerHTML = '<div class="empty">No notes yet. Add one above!</div>';
+        return;
+      }
+      list.innerHTML = notes.map(n => `
+        <div class="note-item">
+          <div>
+            <div class="note-text">${escHtml(n.text)}</div>
+            <div class="note-meta">${new Date(n.createdAt).toLocaleString()}</div>
+          </div>
+          <button class="delete-btn" onclick="deleteNote(${n.id})" title="Delete">✕</button>
+        </div>
+      `).join('');
+    }
+
+    async function addNote() {
+      const input = document.getElementById('noteInput');
+      const text = input.value.trim();
+      if (!text) return;
+      await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      input.value = '';
+      loadNotes();
+    }
+
+    async function deleteNote(id) {
+      await fetch(`/api/notes/${id}`, { method: 'DELETE' });
+      loadNotes();
+    }
+
+    async function checkHealth() {
+      try {
+        const res = await fetch('/health');
+        const data = await res.json();
+        document.getElementById('statusDot').style.background = '#4caf50';
+        document.getElementById('statusLabel').textContent = `App is healthy — uptime: ${Math.floor(data.uptime)}s`;
+      } catch {
+        document.getElementById('statusDot').style.background = '#e53935';
+        document.getElementById('statusLabel').textContent = 'App is not responding';
+      }
+    }
+
+    function escHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    document.getElementById('noteInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') addNote();
+    });
+
+    loadInfo();
+    loadNotes();
+    checkHealth();
+    setInterval(checkHealth, 15000);
+    setInterval(loadInfo, 10000);
+  </script>
+</body>
+</html>
