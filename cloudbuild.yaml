@@ -1,0 +1,73 @@
+# cloudbuild.yaml — Google Cloud Build CI/CD Pipeline
+# Lab 4: Automated build and deploy to Cloud Run and/or GKE
+#
+# Substitutions (set in Cloud Build trigger or pass via --substitutions):
+#   _REGION           : e.g. us-central1
+#   _SERVICE_NAME     : e.g. cloud-notes-app
+#   _GKE_CLUSTER      : e.g. my-cluster  (optional, for GKE deploy)
+#   _GKE_ZONE         : e.g. us-central1-a (optional, for GKE deploy)
+
+substitutions:
+  _REGION: us-central1
+  _SERVICE_NAME: cloud-notes-app
+  _IMAGE: gcr.io/$PROJECT_ID/${_SERVICE_NAME}
+
+steps:
+  # ── Step 1: Build the Docker image ─────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build'
+    args:
+      - 'build'
+      - '-t'
+      - '${_IMAGE}:$SHORT_SHA'
+      - '-t'
+      - '${_IMAGE}:latest'
+      - '.'
+
+  # ── Step 2: Push image to Google Container Registry ────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_IMAGE}'
+    waitFor: ['build']
+
+  # ── Step 3: Deploy to Cloud Run ────────────────────────────────────────────
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-cloud-run'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image=${_IMAGE}:$SHORT_SHA'
+      - '--region=${_REGION}'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--port=3000'
+      - '--set-env-vars=NODE_ENV=production,APP_VERSION=$SHORT_SHA'
+    waitFor: ['push']
+
+  # ── Step 4 (Optional): Deploy to GKE ──────────────────────────────────────
+  # Uncomment below to also deploy to a GKE cluster
+  #
+  # - name: 'gcr.io/cloud-builders/kubectl'
+  #   id: 'deploy-gke'
+  #   args:
+  #     - 'set'
+  #     - 'image'
+  #     - 'deployment/cloud-notes-deployment'
+  #     - 'cloud-notes=${_IMAGE}:$SHORT_SHA'
+  #   env:
+  #     - 'CLOUDSDK_COMPUTE_ZONE=${_GKE_ZONE}'
+  #     - 'CLOUDSDK_CONTAINER_CLUSTER=${_GKE_CLUSTER}'
+  #   waitFor: ['push']
+
+# Store built images in the registry
+images:
+  - '${_IMAGE}:$SHORT_SHA'
+  - '${_IMAGE}:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
