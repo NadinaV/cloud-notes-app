@@ -8,9 +8,9 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'us-docker.pkg.dev/$PROJECT_ID/cloud-notes/${_SERVICE_NAME}:$SHORT_SHA'
+      - 'us-docker.pkg.dev/$PROJECT_ID/cloud-notes-app/${_SERVICE_NAME}:$SHORT_SHA'
       - '-t'
-      - 'us-docker.pkg.dev/$PROJECT_ID/cloud-notes/${_SERVICE_NAME}:latest'
+      - 'us-docker.pkg.dev/$PROJECT_ID/cloud-notes-app/${_SERVICE_NAME}:latest'
       - '.'
 
   - name: 'gcr.io/cloud-builders/docker'
@@ -18,7 +18,7 @@ steps:
     args:
       - 'push'
       - '--all-tags'
-      - 'us-docker.pkg.dev/$PROJECT_ID/cloud-notes/${_SERVICE_NAME}'
+      - 'us-docker.pkg.dev/$PROJECT_ID/cloud-notes-app/${_SERVICE_NAME}'
     waitFor: ['build']
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
