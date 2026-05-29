@@ -3,27 +3,24 @@ substitutions:
   _SERVICE_NAME: cloud-notes-app
 
 steps:
-  # Step 1: Build Docker image
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build'
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$SHORT_SHA'
+      - 'us-docker.pkg.dev/$PROJECT_ID/cloud-notes/${_SERVICE_NAME}:$SHORT_SHA'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest'
+      - 'us-docker.pkg.dev/$PROJECT_ID/cloud-notes/${_SERVICE_NAME}:latest'
       - '.'
 
-  # Step 2: Push image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
     id: 'push'
     args:
       - 'push'
       - '--all-tags'
-      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}'
+      - 'us-docker.pkg.dev/$PROJECT_ID/cloud-notes/${_SERVICE_NAME}'
     waitFor: ['build']
 
-  # Step 3: Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'deploy-cloud-run'
     entrypoint: gcloud
@@ -31,16 +28,12 @@ steps:
       - 'run'
       - 'deploy'
       - '${_SERVICE_NAME}'
-      - '--image=gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$SHORT_SHA'
+      - '--image=us-docker.pkg.dev/$PROJECT_ID/cloud-notes/${_SERVICE_NAME}:$SHORT_SHA'
       - '--region=${_REGION}'
       - '--platform=managed'
       - '--allow-unauthenticated'
       - '--port=3000'
     waitFor: ['push']
-
-images:
-  - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$SHORT_SHA'
-  - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest'
 
 options:
   logging: CLOUD_LOGGING_ONLY
